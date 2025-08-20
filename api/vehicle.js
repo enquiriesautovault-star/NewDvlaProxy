@@ -2,40 +2,46 @@ import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed. Use POST.', details: '' });
+    return res.status(405).json({ error: 'Method Not Allowed. Use POST.' });
   }
 
   const { reg } = req.body;
   if (!reg) {
-    return res.status(400).json({ error: 'Registration number is required', details: '' });
+    return res.status(400).json({ error: 'Bad Request. Registration number is required.' });
   }
 
   const apiKey = process.env.DVLA_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'DVLA_API_KEY is missing', details: '' });
+    return res.status(500).json({ error: 'Server Error. DVLA_API_KEY is missing.' });
   }
 
   try {
-    const dvlaRes = await fetch(
+    const response = await fetch(
       'https://driver-vehicle-licensing.api.gov.uk/vehicle-enquiry/v1/vehicles',
       {
         method: 'POST',
         headers: {
           'x-api-key': apiKey,
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ registrationNumber: reg }),
+        body: JSON.stringify({ registrationNumber: reg })
       }
     );
 
-    if (!dvlaRes.ok) {
-      const text = await dvlaRes.text();
-      return res.status(dvlaRes.status).json({ error: 'DVLA API error', details: text });
+    if (!response.ok) {
+      const errorText = await response.text();
+      return res.status(response.status).json({
+        error: 'DVLA API Error',
+        details: errorText
+      });
     }
 
-    const data = await dvlaRes.json();
+    const data = await response.json();
     return res.status(200).json(data);
   } catch (err) {
-    return res.status(500).json({ error: 'Server error', details: err.message });
+    return res.status(500).json({
+      error: 'Server Error',
+      details: err.message
+    });
   }
 }
