@@ -1,21 +1,28 @@
 import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
- res.setHeader('Access-Control-Allow-Origin', '*');
-res.setHeader('Access-Control-Allow-Methods', 'POST');
-res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
- if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed. Use POST.' });
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Handle preflight OPTIONS request
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { reg } = req.body;
   if (!reg) {
-    return res.status(400).json({ error: 'Bad Request. Registration number is required.' });
+    return res.status(400).json({ error: 'Registration number is required' });
   }
 
   const apiKey = process.env.DVLA_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'Server Error. DVLA_API_KEY is missing.' });
+    return res.status(500).json({ error: 'API key is missing' });
   }
 
   try {
@@ -25,26 +32,15 @@ res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
         method: 'POST',
         headers: {
           'x-api-key': apiKey,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ registrationNumber: reg })
+        body: JSON.stringify({ registrationNumber: reg }),
       }
     );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      return res.status(response.status).json({
-        error: 'DVLA API Error',
-        details: errorText
-      });
-    }
-
     const data = await response.json();
     return res.status(200).json(data);
-  } catch (err) {
-    return res.status(500).json({
-      error: 'Server Error',
-      details: err.message
-    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 }
